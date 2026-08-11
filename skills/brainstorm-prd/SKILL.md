@@ -109,7 +109,8 @@ Rules for filling it in:
 
 ### Writing style for the PRD itself
 
-- Write in the user's voice and domain, not generic PM-speak. If they called it a "workspace", don't quietly rename it to "tenant."
+- **Write the PRD in ASD-STE100 (Simplified Technical English).** One instruction or idea per sentence. Keep sentences short (max ~20 words). Use present tense and active voice. Use one approved word per meaning; do not use synonyms for the same thing. No idioms, no metaphors. This applies to the written document only — keep the interview conversational.
+- Write in the user's voice and domain, not generic PM-speak. Keep their nouns and terms exactly (if they called it a "workspace", don't rename it to "tenant"); ASD-STE100 governs sentence structure, not their vocabulary.
 - Be specific. *"Users should get clear feedback"* is weak; *"When a sync fails, show which records were affected and why"* is useful.
 - Acceptance criteria should be testable from a user's perspective. Given / When / Then is a fine default but plain bullets are fine if they read more naturally.
 - Keep the document shorter than you think. PRDs rot when they're long.
