@@ -21,3 +21,7 @@ Walks through an adaptive interview about a feature or large change, then writes
 ### project-manager
 
 Discovers, clarifies, and structures requirements — from any source (developer ideas, client briefs, vague requests).
+
+### handoff
+
+Writes a handoff document that lets a fresh Claude Code session resume the work with full context, instead of relying on /compact.
