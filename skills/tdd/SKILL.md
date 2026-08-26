@@ -13,11 +13,7 @@ description: >
 
 # TDD — Test-Driven Development
 
-You are a disciplined TDD practitioner. Your job is to guide feature development through the strict red/green/refactor loop, one test at a time. Never skip steps, never write implementation before a test, and never move on without running the test suite.
-
-## Why this discipline matters
-
-TDD isn't about testing — it's about design. Writing the test first forces you to think about the API from the caller's perspective before committing to an implementation. The small steps prevent you from over-engineering. The refactor step is where good design *emerges* rather than being imposed upfront. Every shortcut undermines this — skipping the red step means you don't know your test actually tests anything; skipping green discipline means you write more than needed; skipping refactor means design debt accumulates silently.
+You are a disciplined TDD practitioner who guides development through the strict red/green/refactor loop, one test at a time.
 
 ## Phase 1: Understand & Decompose
 
@@ -77,7 +73,7 @@ Before each spec, announce: "Spec N: [spec name]" — nothing else. Do not annou
 1. Write ONE test that covers the expected spec
 2. The test should be clear and readable — someone should understand the spec just from reading the test
 3. Follow the project's existing test conventions (naming, structure, assertions)
-4. Use real objects; use verified doubles/strict mocks for external dependencies (network, DB, external services)
+4. Use real objects; use strict/verified doubles only at external boundaries — see Rules
 5. Run the **specific test** you just wrote (targeting the individual test, not the full suite)
 
 **After running, verify:**
@@ -177,17 +173,15 @@ When all specs are done:
 
 ## Rules
 
-These aren't arbitrary — each exists because skipping it undermines the TDD feedback loop.
-
 - **One test at a time.** Never write two tests before making the first one pass. Never write multiple failing tests and then implement them all at once — this is "horizontal slicing" and it breaks the feedback loop. Each 🔴 RED must be followed by 🟢 GREEN before the next 🔴 RED.
-- **Always run tests.** After every RED, GREEN, and REFACTOR step. No exceptions. Run the specific test during RED. During GREEN, run the specific test first, then the full spec file. During REFACTOR, run the spec file after each change. Save full suite runs for Phase 3.
+- **Always run tests.** Run tests after every step; save the full suite for Phase 3.
 - **Minimal GREEN.** Write only what's needed to pass. Future tests drive future code.
 - **Don't skip REFACTOR.** Evaluate even if the answer is "nothing to change." This keeps you honest.
 - **Tests are first-class.** Refactor test code with the same care as production code.
 - **No implementation before a test.** If you wrote production code without a failing test demanding it — delete it. Don't adapt it, don't keep it as reference. Start fresh from a failing test. This is non-negotiable.
 - **Respect existing tests.** They should never break unless you're intentionally changing the behavior they describe.
 - **Don't test private internals.** Test observable behavior from the public interface.
-- **Mock at system boundaries only.** Use verified doubles/strict mocks for external dependencies (network, DB, filesystem, external APIs) — these catch interface drift at test time instead of letting it slip to production. For internal collaborators, use real objects. Prefer dependency injection over internal construction. Prefer returning results over producing side effects. See `references/interface-design.md` for testable interface patterns and `references/anti-patterns.md` for common traps.
+- **Mock at system boundaries only.** Use verified doubles/strict mocks for external dependencies (network, DB, filesystem, external APIs) — these catch interface drift at test time instead of letting it slip to production. For internal collaborators, use real objects. Prefer dependency injection over internal construction. Prefer returning results over producing side effects.
 
 ### Red Flags — Stop and Correct
 
@@ -198,12 +192,14 @@ If you catch yourself thinking any of these, stop and return to the discipline:
 | "This is too simple to test" | Simple specs are the fastest to TDD — no excuse to skip |
 | "I'll write the tests after" | You won't. And if you do, they'll test what you built, not what you need |
 | "I already know the implementation" | Then the tests will be easy to write first. Do it anyway |
-| "Let me just write a few tests first, then implement" | Horizontal slicing — breaks the feedback loop |
 | "I'll keep this code I wrote, just add a test" | Delete it. The test must come first to drive the design |
-| "I'll just use a loose mock, faster" | Use verified doubles/strict mocks — loose mocks drift silently from real interfaces |
 
-> **Note**: Examples in the reference files use Ruby/RSpec, but all concepts apply to any language and test framework. Adapt the patterns to your project's stack (e.g., `instance_double` → `unittest.mock.create_autospec` in Python, `jest.mocked<T>` in TypeScript, etc.).
+For code-shaped red flags (mock drift, too many doubles, implementation-detail tests), see `references/anti-patterns.md`.
 
-> **Style**: Prefer single-line statements over splitting calls across multiple lines for character-count reasons. The project's formatter/linter handles line length — write the call naturally on one line and let the tool wrap it if needed. Reserve multi-line layout for cases where it genuinely aids readability (e.g., a long hash with 5+ keys, nested blocks).
+> **Note**: Reference examples use Ruby/RSpec, but the concepts apply to any language and framework. Adapt the patterns to your stack (e.g., `instance_double` → `unittest.mock.create_autospec` in Python, `jest.mocked<T>` in TypeScript). Write calls on one line and let the formatter wrap them.
 
-See also: `references/interface-design.md` for testable interface design, `references/anti-patterns.md` for common traps, and `references/examples.md` for good/bad code examples.
+## References
+
+- `references/interface-design.md` — design testable interfaces (injection, return values, small surface).
+- `references/anti-patterns.md` — traps that break the feedback loop, and a red-flag quick reference.
+- `references/examples.md` — good/bad code for each red/green/refactor phase.
