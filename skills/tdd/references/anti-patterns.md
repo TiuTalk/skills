@@ -1,294 +1,234 @@
-# TDD Anti-Patterns
+# Antipatterns and phase examples
 
-Common traps that break the TDD feedback loop. When you catch yourself doing any of these, stop and correct course.
+Read when a red flag fires and the fix is not in Rules. Most antipatterns break one Test Desiderata property. Name the lost property, then pick the fix.
 
-## 1. Asserting on Mock Calls When You Can Assert on Output
+## Catalog
 
-Using `have_received` to verify a collaborator was called, when you could instead assert on the return value or observable result. `have_received` tests wiring, not correctness.
+| Name | Symptom | Why it hurts | Fix |
+|---|---|---|---|
+| **All tests first / horizontal slicing** | 5+ red tests before any code | The first green changes decisions, so every test needs rework | One test, make it pass, then the next |
+| **The Liar** | Test passes but checks nothing: missing `await`, aliased objects, tautology | False confidence. Breaks *Behavioral* | Watch every new test fail |
+| **Unreadable failures** | `False is not true`, `expected true` | Every failure needs a debugging session. Breaks *Specific* | Read the message while red. Described assertions, matchers, readable `repr` |
+| **Weakened assertions** | Assertion removed, loosened, or test skipped to reach green | A green bar that proves nothing | Fix the code, not the oracle |
+| **Pasted expected values** | Expected value copied from actual output | Pins current bugs | Derive values by hand or from the spec |
+| **Assertion-free test** | No assert; passes if nothing throws | Coverage with no verification | Assert the outcome, or assert the exception |
+| **Config value test** | `expect(config.x).to eq(true)` | Passes when the setting is ignored | Assert the behavior the setting enables, at the application layer |
+| **Testing a dependency's internals** | Asserting how a gem or library works inside | Breaks on upgrade. Verifies nothing you own | Test your code's outcome. If the effect is entirely inside the dependency, do not test it |
+| **Bug fixed without a failing test** | Defect fixed, no test added | Diagnosis unproven. The defect can return | Regression test first |
+| **Skipped refactor** | Tested but tangled code | "Messy aggregation of code fragments" | Refactor on green every cycle that needs it |
+| **Refactoring while red** | Structural edits while a test fails | Cannot tell which change broke what | Two hats: make it run, then make it right |
+| **Test and code changed in one step** | Both edited together during a refactor | No stable oracle for that step | One side at a time, on green |
+| **Premature abstraction** | Helpers and layers after one use | Indirection that later tests may prove wrong | Wait for the third instance |
+| **Mirrored structure** | One test class per production class; tests break on extract or rename | Blocks refactoring. Breaks *Structure-insensitive* | New test only for new behavior. Test through the public API |
+| **The Inspector** | Reflection, test-only getters, private methods made public | Breaks on internal change | Test via the public API. Extract a type if private logic needs its own tests |
+| **The Mockery** | The test mainly proves the mocks work | Coupled to call patterns | Real collaborators. Doubles only at owned boundaries |
+| **Mocking the project's own infrastructure** | `Repo`, the ORM, or the repository mocked to "keep it fast" | The real path is never exercised | Use the project's test DB or sandbox like the existing specs do |
+| **Mocking what you don't own** | `stripe.PaymentIntent.create` mocked directly | Passes when the real library differs | Thin adapter you own, integration test for the adapter |
+| **Verifying queries** | `verify(repo.read(id))` | Over-specified. Wrong code can still pass | Stub queries, verify only commands |
+| **Excessive setup / The Stranger** | Long setup, mock chains, mocks of non-neighbors | Hidden coupling | Fewer dependencies, Law of Demeter, builders |
+| **Object Mother sprawl** | Shared fixture objects used by many tests | One change breaks others | Builders with defaults |
+| **The Giant / The Free Ride** | One test checks many behaviors; new asserts bolted onto old tests | First failure hides the rest | One behavior per test, named for it |
+| **Logic in tests** | Conditionals, copied formulas | Shares the production bug | Literal values. Parameterized rows |
+| **The Nitpicker / big snapshots** | Full-output compares regenerated without review | Breaks on noise | Partial matchers. Small, named snapshots |
+| **Flaky tests** | Pass or fail with no code change | People learn to ignore red | Fix the root cause: clock, sleeps, shared state, threads |
+| **Generous Leftovers / The Sequencer** | Passes alone, fails in the suite or in another order | Breaks *Isolated* | Fresh state per test. Random order |
+| **The Slow Poke** | Suite takes minutes | Runs get rare, steps get large | Small fast tests in the inner loop. E2E in later CI stages |
+| **Coverage as a goal** | Mandated % drives low-value tests | Coverage correlates weakly with fault detection | Use coverage to find gaps, mutation testing to check strength |
+| **Obsolete tests** | Tests for requirements that no longer exist | Red that means nothing | Change tests first when requirements change |
+| **Test-induced design damage** | Layers that exist only for mocking | Needless indirection | Test at a coarser level |
+| **Head against the wall** | Third, fourth, fifth blind fix attempt on the same red | Tokens burned, cause hidden | Two attempts, revert, web-search the error, then explorer/reviewer agents or ask the user |
 
-**Bad** — asserting on the call instead of the result:
-```ruby
-RSpec.describe PricingService do
-  it "applies discount to order total" do
-    calculator = instance_double(DiscountCalculator, apply: 80.0)
-    service = PricingService.new(calculator)
+## Examples by antipattern
 
-    service.price(order)
+### Asserting on a call when you can assert on the result
 
-    # Wrong: verifying the call was made, not what came out
-    expect(calculator).to have_received(:apply).with(order, 0.2)
-  end
-end
+```python
+# Bad: verifies wiring, not correctness
+def test_applies_discount():
+    calculator = Mock(apply=Mock(return_value=80.0))
+    PricingService(calculator).price(order)
+    calculator.apply.assert_called_with(order, 0.2)
+
+# Good: real collaborator, assert on what the system produces
+def test_applies_discount():
+    result = PricingService(DiscountCalculator(rate=0.2)).price(order)
+    assert result.total == 80.0
+
+# Good: a call IS the outcome for a command with a side effect
+def test_sends_welcome_email_on_signup():
+    mailer = SpyMailer()
+    SignupService(mailer).signup("user@test.com")
+    assert mailer.sent == [("user@test.com", "welcome")]
 ```
 
-**Good** — asserting on observable output:
-```ruby
-RSpec.describe PricingService do
-  it "applies discount to order total" do
-    calculator = instance_double(DiscountCalculator, apply: 80.0)
-    service = PricingService.new(calculator)
+### Test-only methods in production code
 
-    result = service.price(order)
+```python
+# Bad
+class ShoppingCart:
+    def items_for_testing(self): return self._items
+    def reset(self): self._items = []
 
-    # Right: assert on what the system produces
-    expect(result.total).to eq(80.0)
-  end
-end
+# Good: test through the real public interface
+def test_total_updates_when_items_are_added():
+    cart = ShoppingCart()
+    cart.add(Item(name="Book", price=10))
+    assert cart.total() == 10
 ```
 
-**Good** — `have_received` IS correct for side effects:
-```ruby
-RSpec.describe SignupService do
-  it "sends welcome email on signup" do
-    mailer = instance_double(Mailer)
-    allow(mailer).to receive(:send_welcome)
-    service = SignupService.new(mailer)
+### Mocking a design problem away
 
-    service.signup("user@test.com")
+```python
+# Bad: five doubles reveal a bloated class
+service = OrderService(db, cache, logger, metrics, validator)
 
-    # Correct: email dispatch IS the observable outcome here
-    expect(mailer).to have_received(:send_welcome).with("user@test.com")
-  end
-end
+# Good: split responsibilities, each with one or two collaborators
+result = OrderProcessor(validator).process(order)
 ```
 
-**Why it matters**: When a collaborator returns a value, assert on what your unit does with that value — not that the call was made. Reserve `have_received` for genuine fire-and-forget side effects where the dispatch itself is the contract.
+### Bare doubles that drift
 
----
+```typescript
+// Bad: no link to the real type; a renamed method stays green
+const notifier = { notify: jest.fn() } as any;
 
-## 2. Test-Only Methods in Production Code
-
-Adding methods like `reset!`, `internal_state`, or `test_hook` to production code solely for test access.
-
-**Bad**:
-```ruby
-class ShoppingCart
-  def initialize
-    @items = []
-  end
-
-  def add(item)
-    @items << item
-  end
-
-  # Exists ONLY for tests — pollutes production API
-  def items_for_testing
-    @items
-  end
-
-  def reset!
-    @items = []
-  end
-end
+// Good: typed against the real interface; a rename fails to compile
+const notifier: jest.Mocked<UserNotifier> = { notify: jest.fn() };
 ```
 
-**Good**:
-```ruby
-class ShoppingCart
-  def initialize
-    @items = []
-  end
+### Implementation-detail tests
 
-  def add(item)
-    @items << item
-  end
+```python
+# Bad: coupled to private names; breaks on any internal rename
+assert user._normalize_name() == "Alice"
 
-  def total
-    @items.sum(&:price)
-  end
-
-  def item_count
-    @items.length
-  end
-end
-
-# Test through the public interface
-RSpec.describe ShoppingCart do
-  it "updates total when items are added" do
-    cart = ShoppingCart.new
-    cart.add(Item.new(name: "Book", price: 10))
-
-    expect(cart.total).to eq(10)
-    expect(cart.item_count).to eq(1)
-  end
-end
+# Good: observable result; survives any internal refactor
+assert User("alice", "alice@test.com").name == "Alice"
 ```
 
-**Why it matters**: If you need test-only methods, your public API is missing something or your test is testing the wrong thing.
+## Examples by phase
 
----
+### 🔴 RED
 
-## 3. Mocking a Design Problem Away
+Good: clear name, one behavior, minimal setup, evident data.
 
-When a test requires 3+ doubles, the instinct is to simplify the test. The correct response is to simplify the design. A class with many injected collaborators has too many responsibilities — the doubles just make it visible.
+```python
+def test_filter_returns_empty_when_no_task_matches():
+    store = TaskStore()
+    store.add(Task(title="Buy milk", status="done"))
 
-**Bad** — 5 doubles reveal a bloated class:
-```ruby
-RSpec.describe OrderService do
-  it "processes an order" do
-    db        = instance_double(OrderRepository)
-    cache     = instance_double(CacheStore)
-    logger    = instance_double(Logger)
-    metrics   = instance_double(MetricsClient)
-    validator = instance_double(OrderValidator, valid?: true)
+    result = store.filter(status="pending")
 
-    allow(db).to receive(:save)
-    allow(cache).to receive(:invalidate)
-    allow(logger).to receive(:info)
-    allow(metrics).to receive(:increment)
-
-    service = OrderService.new(db, cache, logger, metrics, validator)
-    result = service.process(order)
-
-    expect(result.status).to eq("confirmed")
-  end
-end
+    assert result == []
 ```
 
-**Good** — split responsibilities, each class has 1-2 collaborators:
-```ruby
-# Core logic tested in isolation
-RSpec.describe OrderProcessor do
-  it "confirms a valid order" do
-    validator = instance_double(OrderValidator, valid?: true)
-    processor = OrderProcessor.new(validator)
+Bad: vague name, many behaviors, doubles that add noise.
 
-    result = processor.process(order)
+```python
+def test_works():
+    db, logger = Mock(), Mock()
+    store = TaskStore(db, logger)
+    store.add(Task("A", "done")); store.add(Task("B", "pending")); store.add(Task("C", "pending"))
 
-    expect(result.status).to eq("confirmed")
-  end
-end
-
-# Persistence tested separately
-RSpec.describe OrderRepository do
-  it "saves and retrieves an order" do
-    repo = OrderRepository.new(db_connection)
-    repo.save(order)
-
-    expect(repo.find(order.id)).to eq(order)
-  end
-end
+    assert len(store.filter(status="pending")) == 2
+    assert len(store.filter(status="done")) == 1
+    logger.info.assert_called()
 ```
 
-**Rule of thumb**: 3+ doubles in one test = look at the class under test, not the test. The doubles are diagnostic, not the disease.
+Three behaviors in one test, plus logging. The first failure hides the rest. The doubles are not needed for a pure in-memory store. This is three specs, built one at a time.
 
----
+Bad: pasted expected value.
 
-## 4. Bare Doubles That Drift From Real Interfaces
-
-A bare `double` with stubbed methods has no connection to the real class. If the real method is renamed or its signature changes, the test stays green while production breaks. `instance_double` binds the stub to the real class at load time.
-
-**Bad** — bare double, no interface verification:
-```ruby
-RSpec.describe NotificationService do
-  it "notifies user on order completion" do
-    # This double has no idea what UserNotifier actually looks like
-    notifier = double("UserNotifier", notify: true)
-    service = NotificationService.new(notifier)
-
-    service.complete(order)
-
-    expect(notifier).to have_received(:notify).with(order.user_id)
-  end
-end
+```python
+assert Order(items=[Item(price=19.99), Item(price=5.01)], tax=0.0825).total() == 27.0625
 ```
 
-If `UserNotifier#notify` is renamed to `#dispatch` or gains a required argument, this test stays green. Production breaks silently.
+`27.0625` was copied from the output. Derive it by hand from the spec (25.00 plus 8.25% tax, rounded to cents) and assert the literal `27.06`.
 
-**Good** — `instance_double` verifies against the real class:
-```ruby
-RSpec.describe NotificationService do
-  it "notifies user on order completion" do
-    # Fails at load time if :notify doesn't exist on UserNotifier with this arity
-    notifier = instance_double(UserNotifier)
-    allow(notifier).to receive(:notify)
-    service = NotificationService.new(notifier)
+### 🟢 GREEN
 
-    service.complete(order)
+Good: Fake It when one test demands one value.
 
-    expect(notifier).to have_received(:notify).with(order.user_id)
-  end
-end
+```python
+class TaskStore:
+    def filter(self, status):
+        return []
 ```
 
-**Why it matters**: `instance_double` turns interface drift from a silent production failure into a loud test failure. It costs nothing extra to use.
+The next spec ("returns matching tasks") forces the real implementation:
 
----
-
-## 5. Horizontal Slicing (Batch Tests)
-
-Writing all tests first, then all implementation. This breaks the feedback loop — you lose the "one test drives one change" rhythm.
-
-**Bad sequence**:
-```
-Write test 1 (RED)
-Write test 2 (RED)
-Write test 3 (RED)
-Implement everything (GREEN × 3)
-Refactor once
+```python
+class TaskStore:
+    def __init__(self): self._tasks = []
+    def add(self, task): self._tasks.append(task)
+    def filter(self, status): return [t for t in self._tasks if t.status == status]
 ```
 
-**Good sequence**:
-```
-Write test 1 (RED) → Implement (GREEN) → Refactor
-Write test 2 (RED) → Implement (GREEN) → Refactor
-Write test 3 (RED) → Implement (GREEN) → Refactor
-```
+Bad: over-engineering on the first green.
 
-**Why it matters**: Multiple failing tests create pressure to write large implementation chunks. You lose the small-step discipline and the ability to catch regressions between specs. Each RED must be followed by GREEN before the next RED.
+```python
+class TaskStore:
+    def add(self, task):
+        self._validate(task)                 # no test asks for validation
+        self._tasks.append(task)
+        self._emit("task:added", task)       # no test asks for events
 
----
-
-## 6. Implementation-Detail Tests
-
-Tests coupled to internal structure break on every refactor, even when behavior is preserved.
-
-**Bad**:
-```ruby
-RSpec.describe User do
-  it "validates and normalizes" do
-    user = User.new("alice", "alice@test.com")
-
-    # Coupled to private method names — breaks on any internal rename
-    expect(user.send(:validate_email_format)).to be true
-    expect(user.send(:normalize_name)).to eq("Alice")
-  end
-end
+    def filter(self, **criteria):            # no test asks for generic matching
+        return sorted((t for t in self._tasks if self._matches(t, criteria)), key=lambda t: t.created_at)
 ```
 
-**Good**:
-```ruby
-RSpec.describe User do
-  it "normalizes name on creation" do
-    user = User.new("alice", "alice@test.com")
+None of it has a test, so none of it has an oracle.
 
-    # Tests observable result — survives any internal refactor
-    expect(user.name).to eq("Alice")
-    expect(user.email).to eq("alice@test.com")
-  end
+Bad: weakening the test to get green.
 
-  it "rejects invalid email" do
-    expect { User.new("alice", "not-an-email") }
-      .to raise_error(ArgumentError, /invalid email/)
-  end
-end
+```python
+# Was: assert result == [Task("B", "pending")]
+assert len(result) >= 0
 ```
 
-**Why it matters**: The test should survive any internal refactor that preserves behavior. If renaming a private method breaks your tests, they're testing the wrong thing.
+The bar is green and proves nothing. Fix the code, or say the test is wrong and show evidence.
 
----
+### 🔵 REFACTOR
 
-## Quick Reference: Red Flags
+Good: extract shared setup after the third repetition, using the project's fixture mechanism.
 
-Stop and reconsider if you notice:
+```python
+@pytest.fixture
+def store():
+    s = TaskStore()
+    s.add(Task("A", "pending"))
+    s.add(Task("B", "done"))
+    return s
+
+def test_filter_pending(store): assert store.filter(status="pending") == [Task("A", "pending")]
+def test_filter_done(store): assert store.filter(status="done") == [Task("B", "done")]
+```
+
+Good: preparatory refactor when the next spec looks hard. Next spec: "filter by status and assignee". On green, first change `filter` to take a predicate internally, run the tests, then write the new red test.
+
+Bad: premature abstraction after one test.
+
+```python
+def build_store(*items): ...
+def assert_filter(store, criteria, expected): ...
+```
+
+One test does not justify a helper. It hides what the test does. Wait for the third instance.
+
+Bad: renaming `filter` to `where` in the code and in every test at once. If something goes red, there is no stable side to trust. Three steps: add `where` delegating to `filter` (green), switch the tests to `where` (green), delete `filter` (green).
+
+## Red flags at a glance
 
 | Red flag | Likely problem |
 |---|---|
-| Test name describes *how*, not *what* | Implementation-detail test |
-| `have_received` on a call that has a return value | Asserting on wiring, not behavior (#1) |
-| Bare `double` instead of `instance_double` | Interface drift risk (#4) |
-| 3+ doubles in one test | Design smell — too many responsibilities (#3) |
-| Test setup > 10 lines | Test doing too much or missing an abstraction |
-| Test breaks when you rename a private method | Coupled to internals |
+| Test name says *how*, not *what* | Implementation-detail test |
+| Call verification on a method that returns a value | Asserting on wiring |
+| Bare or untyped double | Interface drift |
+| 3+ doubles in one test | Class with too many responsibilities |
+| The ORM or repository is mocked | Project infrastructure treated as external |
+| Setup longer than act and assert together | Missing builder, or too many dependencies |
+| Test breaks on a private rename | Coupled to internals |
 | Production method only called from tests | Test-only method |
-| Multiple tests failing at once (outside initial RED) | Horizontal slicing or regression |
+| Several tests red at once outside the initial RED | Horizontal slicing or a regression |
+| Test file edited to get to green | Weakened oracle. Stop and explain |
+| Same red after two fix attempts | Revert and get help |

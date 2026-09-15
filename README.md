@@ -20,4 +20,4 @@ Writes a handoff document that lets a fresh Claude Code session resume the work 
 
 ### tdd
 
-Structured TDD workflow that decomposes features into small specs and implements them one at a time through the strict red/green/refactor cycle.
+Test-driven coding workflow for any language. Picks a mode (full loop, regression test first, spike, humble object, characterize legacy), decomposes work into a behavior list, then drives each item through 🔴 RED → 🟢 GREEN → 🔵 REFACTOR with status checkpoints. Rules and antipatterns each carry a "Why".
