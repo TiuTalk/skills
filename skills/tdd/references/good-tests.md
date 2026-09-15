@@ -1,6 +1,6 @@
 # Writing good tests and using doubles
 
-Read when a test needs setup over three lines, parameterized rows, an async probe, a UI query, or any double.
+Read when a test needs setup over ten lines, parameterized rows, an async probe, a UI query, or any double.
 
 ## Beck's Test Desiderata
 

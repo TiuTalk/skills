@@ -1,6 +1,6 @@
 # Techniques and reasoning
 
-Read when Phase 0 picks Spike, Legacy, or Humble Object, when one test forces a whole algorithm, or for the sources behind the rules.
+Read when Phase 0 picks Spike, Humble Object, or the characterization modifier, when one test forces a whole algorithm, or for the sources behind the rules.
 
 ## Step size
 
@@ -19,13 +19,13 @@ Pick a second example that *forces* a change. `add(4, 1) == 5` does not.
 - Keep increments small: a few lines, a test run every minute or two.
 - Predict the result before each run. A wrong prediction teaches you something at once.
 - If a test forces a whole algorithm at once, look for a simpler test first (Martin's Transformation Priority Premise: constant → scalar → conditional → loop).
-- Revert instead of editing further. Cap fix attempts at two, then revert.
+- Revert instead of editing further. Cap fix attempts at two, then recover once (SKILL.md, 🟢 GREEN).
 
 Why: Beck triangulates "only when I'm really, really unsure about the correct abstraction." Obvious Implementation is second gear; "be prepared to downshift." A small diff limits where a mistake can be.
 
 ## Outside-in vs. inside-out
 
-- **Outside-in (double loop):** write a failing acceptance test for the feature first. It stays red while many short unit cycles run inside it. Start with a **walking skeleton**: the thinnest slice that builds, deploys, and runs end to end.
+- **Outside-in:** Spec 1, the tracer bullet, is the outer test. It runs the thinnest slice end to end, a **walking skeleton**, and goes green before Spec 2. Never carry a red test across cycles.
   Why: The outer test defines "done" in user terms and stops gold-plating.
 - **Inside-out:** build and test the domain with real objects first, then add the delivery layer.
   Why: Tests stay coupled to state, and refactoring stays cheap.
@@ -47,9 +47,9 @@ Why: The failing test proves you reproduced the defect. A test that passes befor
 
 When the requirement or the feasibility is unclear, write throwaway code to learn. Rules:
 
-1. Say "spike" before you start. No tests, no cleanup.
+1. Print `🧪 SPIKE — [what to learn]` before you start. No tests, no cleanup.
 2. Learn what you needed: the API shape, the data, whether it is possible.
-3. Delete the spike. `git stash drop` or `git checkout -- .`. It never stays in the diff.
+3. Delete the spike: `git restore <files the spike changed>` and `rm <files the spike created>`. Never touch other changes. It never stays in the diff.
 4. Write the spec list from what you learned. Start Phase 1.
 
 Why: TDD needs a concrete expected outcome to assert. Tests written on top of guesses encode the guesses. Keeping spike code means untested code with no oracle.

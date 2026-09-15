@@ -36,7 +36,7 @@ Read when a red flag fires and the fix is not in Rules. Most antipatterns break 
 | **Coverage as a goal** | Mandated % drives low-value tests | Coverage correlates weakly with fault detection | Use coverage to find gaps, mutation testing to check strength |
 | **Obsolete tests** | Tests for requirements that no longer exist | Red that means nothing | Change tests first when requirements change |
 | **Test-induced design damage** | Layers that exist only for mocking | Needless indirection | Test at a coarser level |
-| **Head against the wall** | Third, fourth, fifth blind fix attempt on the same red | Tokens burned, cause hidden | Two attempts, revert, web-search the error, then explorer/reviewer agents or ask the user |
+| **Head against the wall** | Third, fourth, fifth blind fix attempt on the same red | Tokens burned, cause hidden | Two attempts. Then reviewer agent, explorer agent, and web search in parallel, revert, one more attempt, then stop and ask the user |
 
 ## Examples by antipattern
 
@@ -231,4 +231,4 @@ Bad: renaming `filter` to `where` in the code and in every test at once. If some
 | Production method only called from tests | Test-only method |
 | Several tests red at once outside the initial RED | Horizontal slicing or a regression |
 | Test file edited to get to green | Weakened oracle. Stop and explain |
-| Same red after two fix attempts | Revert and get help |
+| Same red after two fix attempts | Recover once, then stop and ask the user |
