@@ -1,18 +1,14 @@
 ---
 name: tdd
 description: >
-  Test-driven coding workflow for any language. Break the work into a list of behaviors, then
-  drive each one through 🔴 RED → 🟢 GREEN → 🔵 REFACTOR with status checkpoints. Use it for
-  every coding task: a feature, a bug fix, a refactor, a new function, endpoint, CLI, transform,
-  or migration with logic, whether or not the user mentions tests. Always use it on "TDD",
-  "test-first", "red green refactor", "one test at a time". Do NOT use it for config tweaks,
-  docs, copy, CI files, test-infrastructure setup, running an existing suite, code review, or
-  generated and vendored code (protobuf, OpenAPI clients).
+  Test-driven workflow (RED > GREEN > REFACTOR) for any language. Use it for every coding task
+  — features, bug fixes, refactors, migrations with logic — whether or not the user mentions
+  tests. Always on "TDD", "test-first", "red green refactor", "one test at a time". Not for
+  config tweaks, docs, copy, CI files, test-infrastructure setup, running an existing suite,
+  code review, or generated/vendored code (protobuf, OpenAPI clients).
 ---
 
 # TDD — test-driven coding for any language
-
-Write code in small, verified steps. A failing test states the expected behavior. The code makes it pass. A refactor keeps it clean. Repeat. No production code exists without a test that failed first.
 
 ## Phase 0: Pick the mode
 
@@ -32,12 +28,8 @@ Full loop with no modifier prints nothing. Otherwise print one line, e.g. `Mode:
 
 ### 1. Learn how this project tests
 
-Do this first, every session:
-
-- Find the framework, test directory, file naming, and assertion style.
-- Read two existing specs near the code you will change. Copy their shape: setup, factories or builders, how they touch the DB, how they handle external calls.
-- Note the runner command for one test and for one spec file, in its quiet or failures-only form (`pytest -q --tb=short`, `rspec --format progress`, `go test -run X`, `vitest --reporter=dot`). Use that form on every run. Follow the project's own instructions (CLAUDE.md, README) if they exist.
-- Read the code you will change and at least one caller.
+- Find the framework, test directory, file naming, and assertion style. Read two specs near the code you will change and copy their shape: setup, factories, DB access, external calls. Read the code you will change and one caller.
+- Note the runner command in its quiet or failures-only form (`pytest -q --tb=short`, `rspec --format progress`, `go test -run X`). Use that form on every run. Follow CLAUDE.md or README if they exist.
 
 ### 2. Clarify
 
@@ -88,16 +80,13 @@ Print `⛔ STOP` whenever you need the user, then wait for the reply:
   Reply: "drop 3", or state the fix
 ```
 
-- Print each line as plain text right after the test run that verifies it, one line per step. No prose around it, no batching at the end.
-- Write each status line as a text message before your next tool call. A test run without its status line after it means you skipped a step.
+- Print each status line as plain text right after the run that verifies it, before your next tool call. No prose, no batching. A run without its status line means you skipped a step.
 - The code fences in this document only mark examples. Never wrap status lines in fences.
 - Under 🔴, quote the one failure line. Under 🟢 and 🔵, no runner output unless something failed.
 - Print 🔵 only when the code or tests changed. Nothing to refactor: skip the line.
 - One spec per cycle, one ✅ per line. Never mark two specs done together.
 - Print the full spec list at Phase 1, when you add or split an item, and at Phase 3. Not after every spec.
 - Lint and formatter output only on failure.
-
----
 
 ### 🔴 RED — write one failing test
 
@@ -116,20 +105,11 @@ Print `⛔ STOP` whenever you need the user, then wait for the reply:
 3. Run `git restore <production file>`. `git diff <production file>` must be empty.
 4. Act on the result:
    - The new test stayed green: the test is a Liar. Fix the test.
-   - An earlier 🟢 in this run wrote the code: keep the test. Use Fake It for the next 🟢 only.
-     ```
-     Spec 2/4: USD -> GBP at a known rate
-     🔴 test_convert_usd_to_gbp (tests/test_bank.py:31) · commented out code from Spec 1
-       AssertionError: expected Note(80.00, "GBP"), got Note(100.00, "USD")
-     🟢 bank.py (code restored)
-     ✅ Spec 2/4
-     ```
+   - An earlier 🟢 in this run wrote the code: keep the test. Use Fake It for the next 🟢 only. Add `· commented out code from Spec 1` to the 🔴 line; the 🟢 line reads `bank.py (code restored)`.
    - The behavior existed before this run, and only the new test went red: keep the test. Print `⚪ ALREADY GREEN — Spec 3/4: test kept`.
    - The behavior existed before this run, and other tests went red too: delete the new test. Print `⚪ ALREADY GREEN — Spec 3/4: covered by test_unknown_pair, test deleted`.
 
 Characterization tests are exempt: they pin behavior that already exists.
-
----
 
 ### 🟢 GREEN — make it pass with the smallest step your confidence allows
 
@@ -150,8 +130,6 @@ Characterization tests are exempt: they pin behavior that already exists.
 
 **Verify:** the new test passes.
 
----
-
 ### 🔵 REFACTOR — improve the design while green
 
 Evaluate every cycle: duplication (in code and tests), naming, function size, a pattern in 3+ places that wants a name, test readability. "Duplication is a hint, not a command."
@@ -160,8 +138,6 @@ Evaluate every cycle: duplication (in code and tests), naming, function size, a 
 - If the **next** spec looks hard to pass, refactor first, before writing its test: "make the change easy, then make the easy change." Print `🔵 PREP REFACTOR — [what]`.
 - Do not add tests for classes you extract. The existing behavior tests cover them. If an extracted class needs its own contract, add a spec for it to the list.
 - If a refactor breaks something, revert and take a smaller step.
-
----
 
 ### Transition
 
@@ -203,23 +179,14 @@ Ready to /commit?
 
 - **No implementation before a test.** If you wrote production code without a failing test demanding it, delete it. Do not adapt it or keep it as reference. Start again from a failing test.
   Why: Code and tests written in the same pass agree by default, bugs included.
-- **One test at a time.** Each 🔴 gets its 🟢 before the next 🔴.
-  Why: Ten red tests are a long way from green, and the first green changes decisions.
 - **Never delete, weaken, skip, or disable a test to reach green.** Fix the code, not the oracle. Three exceptions, stated in the output: a test for a requirement the user changed, approved characterization output the change alters (quote the changed lines), and a new test that duplicates an existing one (`⚪ ALREADY GREEN`). If you think a test is wrong, print `⛔ STOP` with the evidence and let the user decide.
-  Why: A green bar only has value if it means the behavior works.
 - **Requirements change: tests change first.** Edit or delete the test, watch it go red, then change the code. When an old test goes red, ask "should it, really?"
-  Why: The suite must describe current behavior, not history.
-- **Never paste actual output into the expected value.** Exception: characterization tests on legacy code.
-  Why: It pins current bugs as correct.
 - **Test through the public API or port** (the interface the module exposes to callers). No private methods, test-only getters, or reflection. Test outcomes at the application layer, never a config value or a dependency's internals.
   Why: Refactoring moves structure behind the API. Structure-coupled tests remove the refactor step.
 - **Real objects first.** Doubles only for what is slow, non-deterministic, or not owned: a third-party API client, a payment gateway, a clock. The project's test DB, sandbox, temp dir, or test server counts as real. Stub collaborators that return data; verify calls only on collaborators with side effects.
   Why: State tests survive refactors. Mocked internals pass while production breaks.
 - **Inject clocks, randomness, and executors. Fresh state per test. Poll observable state with a timeout instead of `sleep`.**
-  Why: A flaky test teaches everyone to ignore red.
-- **No logic in tests.** No conditionals, arithmetic in expected values (`6 - 2`, `100 * 0.80`), or copied formulas. A table-driven runner loop is fine. Prefer readable duplication over helpers that hide the data.
-  Why: A copied formula shares the production bug.
-- **Show evidence.** Under 🔴, the failure line. In Phase 3, the related specs result line. Never "tests pass" without a run.
+- **No logic in tests.** No conditionals, arithmetic in expected values (`6 - 2`, `100 * 0.80`), copied formulas, or pasted actual output (exception: characterization tests). A table-driven runner loop is fine. Prefer readable duplication over helpers that hide the data.
 
 ### Red flags — stop and correct
 
@@ -245,5 +212,3 @@ Read each reference at most once per session.
 - `references/good-tests.md` — read when a test needs setup over ten lines, parameterized rows, an async probe, a UI query, or any double.
 - `references/techniques.md` — read when Phase 0 picks Spike, Humble Object, or the characterization modifier, when one test forces a whole algorithm, or for the reasoning and sources behind the rules.
 - `references/anti-patterns.md` — read when a red flag fires and the fix is not in Rules. Includes good/bad code per phase.
-
-Examples use Python, TypeScript, and Go. Adapt them to the stack in front of you.
