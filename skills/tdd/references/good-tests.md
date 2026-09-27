@@ -51,11 +51,11 @@ One Act per test. If Act-Assert repeats, split the test. Separate the three part
 
 ```python
 def test_gold_customer_gets_ten_percent_off():
-    order = Order(customer=Customer(tier="gold"), items=[Item(price=100.00)])
+    order = Order(customer=Customer(tier="gold"), items=[Item(price_cents=10_000)])
 
-    total = order.total()
+    total = order.total_cents()
 
-    assert total == 90.00
+    assert total == 9_000
 ```
 
 - One concept per test, not literally one assert. Several asserts are fine when they check one outcome and each failure names what broke.
@@ -77,30 +77,30 @@ Why: Someone reads the test in a year. A behavior name lets you challenge the pr
 
 - Derive expected values by hand or from the spec. Show the relationship in the literal.
   - Bad: `expected = price * (1 - discount_rate)` (shares the production bug)
-  - Good: `assert total == 90.00`
+  - Good: `assert total_cents == 9_000`
 - No conditionals or computed values in test bodies.
 - Many input/output pairs: use the framework's parameterized or table-driven form. One literal row per case, each with a name.
 
 ```python
 @pytest.mark.parametrize("tier, expected", [
-    pytest.param("gold", 90.00, id="gold gets 10%"),
-    pytest.param("silver", 95.00, id="silver gets 5%"),
-    pytest.param("none", 100.00, id="no tier pays full price"),
+    pytest.param("gold", 9_000, id="gold gets 10%"),
+    pytest.param("silver", 9_500, id="silver gets 5%"),
+    pytest.param("none", 10_000, id="no tier pays full price"),
 ])
 def test_tier_discount(tier, expected):
-    assert Order(customer=Customer(tier=tier), items=[Item(price=100.00)]).total() == expected
+    assert Order(customer=Customer(tier=tier), items=[Item(price_cents=10_000)]).total_cents() == expected
 ```
 
 ```go
 func TestTierDiscount(t *testing.T) {
-    cases := []struct{ name, tier string; want float64 }{
-        {"gold gets 10%", "gold", 90.00},
-        {"silver gets 5%", "silver", 95.00},
-        {"no tier pays full price", "", 100.00},
+    cases := []struct{ name, tier string; want int64 }{
+        {"gold gets 10%", "gold", 9000},
+        {"silver gets 5%", "silver", 9500},
+        {"no tier pays full price", "", 10000},
     }
     for _, tc := range cases {
         t.Run(tc.name, func(t *testing.T) {
-            got := NewOrder(Customer{Tier: tc.tier}, Item{Price: 100}).Total()
+            got := NewOrder(Customer{Tier: tc.tier}, Item{PriceCents: 10000}).TotalCents()
             if got != tc.want { t.Fatalf("total = %v, want %v", got, tc.want) }
         })
     }

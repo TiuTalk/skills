@@ -36,7 +36,7 @@ Read when a red flag fires and the fix is not in Rules. Most antipatterns break 
 | **Coverage as a goal** | Mandated % drives low-value tests | Coverage correlates weakly with fault detection | Use coverage to find gaps, mutation testing to check strength |
 | **Obsolete tests** | Tests for requirements that no longer exist | Red that means nothing | Change tests first when requirements change |
 | **Test-induced design damage** | Layers that exist only for mocking | Needless indirection | Test at a coarser level |
-| **Head against the wall** | Third, fourth, fifth blind fix attempt on the same red | Tokens burned, cause hidden | Two attempts. Then reviewer agent, explorer agent, and web search in parallel, revert, one more attempt, then stop and ask the user |
+| **Head against the wall** | Third, fourth, fifth blind fix attempt on the same red | Tokens burned, cause hidden | Two attempts. Then reviewer agent, explorer agent, and web search in parallel, undo your edits, one more attempt, then stop and ask the user |
 
 ## Examples by antipattern
 
@@ -45,14 +45,14 @@ Read when a red flag fires and the fix is not in Rules. Most antipatterns break 
 ```python
 # Bad: verifies wiring, not correctness
 def test_applies_discount():
-    calculator = Mock(apply=Mock(return_value=80.0))
+    calculator = Mock(apply=Mock(return_value=8_000))
     PricingService(calculator).price(order)
     calculator.apply.assert_called_with(order, 0.2)
 
 # Good: real collaborator, assert on what the system produces
 def test_applies_discount():
     result = PricingService(DiscountCalculator(rate=0.2)).price(order)
-    assert result.total == 80.0
+    assert result.total_cents == 8_000
 
 # Good: a call IS the outcome for a command with a side effect
 def test_sends_welcome_email_on_signup():
@@ -140,10 +140,10 @@ Three behaviors in one test, plus logging. The first failure hides the rest. The
 Bad: pasted expected value.
 
 ```python
-assert Order(items=[Item(price=19.99), Item(price=5.01)], tax=0.0825).total() == 27.0625
+assert Order(items=[Item(price=Decimal("19.99")), Item(price=Decimal("5.01"))], tax=Decimal("0.0825")).total() == Decimal("27.0625")
 ```
 
-`27.0625` was copied from the output. Derive it by hand from the spec (25.00 plus 8.25% tax, rounded to cents) and assert the literal `27.06`.
+`27.0625` was copied from the output. Derive it by hand from the spec (25.00 plus 8.25% tax, rounded to cents) and assert the literal `Decimal("27.06")`.
 
 ### 🟢 GREEN
 
@@ -216,6 +216,23 @@ def assert_filter(store, criteria, expected): ...
 One test does not justify a helper. It hides what the test does. Wait for the third instance.
 
 Bad: renaming `filter` to `where` in the code and in every test at once. If something goes red, there is no stable side to trust. Three steps: add `where` delegating to `filter` (green), switch the tests to `where` (green), delete `filter` (green).
+
+## Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "This is too simple to test" | Simple specs take seconds. Fake It and move on |
+| "I'll write the tests after" | A test you never saw fail may check nothing. Write it first, or prove it fails with a stub line |
+| "I already know the implementation" | The test still comes first. Obvious Implementation only when every line serves the current spec |
+| "I'll keep this code and add a test" | Keep it only after a stub line proves the new test fails against it. Otherwise delete it |
+| "The test is wrong, I'll loosen it" | Print `⛔ STOP` with the evidence, let the user decide |
+| "I'll write all five tests now" | Horizontal slicing. Five reds mean large steps and no feedback |
+| "One more try, I almost have it" | Two attempts, recover once, then `⛔ STOP` |
+| "I'll mark both specs done, one change covers them" | One spec per cycle. Merge specs at the spec list |
+| "I'll mock the repository to keep it fast" | The project's test DB is real. Mock only types you own. Wrap a third-party API in an adapter you own |
+| "I'll assert the config value" | Assert the behavior the config enables |
+| "I'll show the status at the end" | Print each line right after its test run |
+| "I'll write the whole rule now, the next specs need it" | Write only what this test demands. The next spec's 🔴 drives the rest |
 
 ## Red flags at a glance
 

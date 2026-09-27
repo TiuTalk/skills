@@ -19,13 +19,13 @@ Pick a second example that *forces* a change. `add(4, 1) == 5` does not.
 - Keep increments small: a few lines, a test run every minute or two.
 - Predict the result before each run. A wrong prediction teaches you something at once.
 - If a test forces a whole algorithm at once, look for a simpler test first (Martin's Transformation Priority Premise: constant → scalar → conditional → loop).
-- Revert instead of editing further. Cap fix attempts at two, then recover once (SKILL.md, 🟢 GREEN).
+- Undo your edits with Edit instead of editing further. Cap fix attempts at two, then recover once (SKILL.md, 🟢 GREEN).
 
 Why: Beck triangulates "only when I'm really, really unsure about the correct abstraction." Obvious Implementation is second gear; "be prepared to downshift." A small diff limits where a mistake can be.
 
 ## Outside-in vs. inside-out
 
-- **Outside-in:** Spec 1, the tracer bullet, is the outer test. It runs the thinnest slice end to end, a **walking skeleton**, and goes green before Spec 2. Never carry a red test across cycles.
+- **Outside-in:** Spec 1, the tracer bullet, is the outer test. It runs the thinnest slice end to end, a **walking skeleton**, and goes green before Spec 2. The only red test you may carry across cycles is one `(outer)` acceptance test (SKILL.md, Phase 1).
   Why: The outer test defines "done" in user terms and stops gold-plating.
 - **Inside-out:** build and test the domain with real objects first, then add the delivery layer.
   Why: Tests stay coupled to state, and refactoring stays cheap.
@@ -49,7 +49,7 @@ When the requirement or the feasibility is unclear, write throwaway code to lear
 
 1. Print `🧪 SPIKE — [what to learn]` before you start. No tests, no cleanup.
 2. Learn what you needed: the API shape, the data, whether it is possible.
-3. Delete the spike: `git restore <files the spike changed>` and `rm <files the spike created>`. Never touch other changes. It never stays in the diff.
+3. Delete the spike: undo its edits with Edit, and `rm <files the spike created>`. Never touch other changes. It never stays in the diff.
 4. Write the spec list from what you learned. Start Phase 1.
 
 Why: TDD needs a concrete expected outcome to assert. Tests written on top of guesses encode the guesses. Keeping spike code means untested code with no oracle.
@@ -112,4 +112,4 @@ Sources behind SKILL.md, for when you need the reasoning.
 - **Evident data:** "You are writing tests for a reader, not just the computer." Pasting actual output "defeats double checking, which creates much of the validation value of TDD." (Beck)
 - **Doubles:** "emphasizing state testing is more scalable; it reduces test brittleness" (Google). "Mock Objects is misnamed. It is really a technique for identifying types in a system based on the roles that objects play." (Freeman, Pryce et al.)
 - **Agents:** deleted or disabled tests in an agent's diff are a stop sign (Beck, *Augmented Coding*). Agent commits add mocks more often than human commits (36% vs 26%, arXiv 2602.00409), hence the explicit mocking rules.
-- **Evidence:** industrial case studies report 40-90% lower pre-release defect density at 15-35% more initial time (Nagappan et al. 2008). A meta-analysis found a small positive effect on quality and no clear productivity effect (Rafique and Misic 2013). Short, uniform cycles predicted quality and productivity (Fucci et al. 2017). Most "TDD failed" stories describe practices Beck calls mistakes: all tests first, per-method tests, mock everything.
+- **Evidence:** industrial case studies report 40-90% lower pre-release defect density at 15-35% more initial time (Nagappan et al. 2008). A meta-analysis found a small positive effect on quality and no clear productivity effect (Rafique and Misic 2013). Short, uniform cycles predicted quality and productivity; test-first vs. test-last order had no significant effect (Fucci et al. 2017). The skill keeps test-first because a red you have seen is the cheap proof that a test can fail. Most "TDD failed" stories describe practices Beck calls mistakes: all tests first, per-method tests, mock everything.
