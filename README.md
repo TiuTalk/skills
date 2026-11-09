@@ -14,6 +14,10 @@ npx skills add TiuTalk/skills
 
 Walks through an adaptive interview about a feature or large change, then writes a Product Requirements Document (PRD).
 
+### clean-branches
+
+Finds stale local git branches and worktrees (merged, squash-merged, or closed PRs) and deletes them after confirmation. Does not delete remote branches.
+
 ### handoff
 
 Writes a handoff document that lets a fresh Claude Code session resume the work with full context, instead of relying on /compact.
